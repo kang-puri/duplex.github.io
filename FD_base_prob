@@ -1,0 +1,87 @@
+clc; clear; close all;
+
+%---------------------------------set up---------------------------------
+
+Frequency = 5500*10^6;
+lambda = physconst('LightSpeed')/Frequency;
+delta = 11;
+
+initVar();          % initialize data_rate m_max CW_min 
+                    % PHY_header PHY_preamble RTS_size CTS_size ACK_size Payload 
+                    % SIFS DIFS slot_time MAC_header
+initAP();           % initialize x_ap y_ap m r
+
+TC = 10^3;          % the number of testcase
+total_success = 0;  % total_success
+total_ratio = [];
+for N = 4:4:40
+    total_success = 0;
+    for tc = 1: TC
+        r = 20;
+        r2= r*sqrt(rand(1,N));
+        theta2 = 2 * pi * rand(1,N);
+        x_no = r2.*cos(theta2);
+        y_no = r2.*sin(theta2);
+
+        % initialize check_map
+        check_map = zeros(N,N);
+        check_success = zeros(1,N);
+        for i=1:N
+            for j=1:N
+                if i~=j
+                    SIR = SIRatio(x_no(j), y_no(j), x_no(i), y_no(i));
+                    if SIR > delta
+                        check_map(j, i) = 1;
+                        check_success(1, i) = 1;
+                    end
+                end
+            end
+        end
+        % success 경우 더해주기
+        total_success = total_success + numel(find(check_success(1,:)==1));
+
+        %check_map
+        %check_success
+        %pause(2);
+    end
+    ratio_success = (total_success / (TC * N));
+    %ratio_success
+    total_ratio = [total_ratio ratio_success];
+
+end
+%total_ratio
+figure(1)
+plot(4:4:40, total_ratio,'b-o','LineWidth',1);
+axis([4 40 0 1.5]);
+
+function initAP()
+    global x_ap y_ap m r
+    x_ap = 0;
+    y_ap = 0;    
+    ap = [x_ap y_ap];
+    m = 10^3;
+    theta = linspace(0, 2*pi, m);
+    r = 20;
+    x = r*cos(theta)+ap(1);
+    y = r*sin(theta)+ap(2);
+
+end
+
+function res = SIRatio(x1, y1, x2, y2)
+    global G_ap G_no P_ap P_no
+    G_ap = 0; G_no = -2; P_ap = 20; P_no = 15;
+    PL_dsr = pathloss(x1, y1, 0, 0);
+    PL_dn = pathloss(x1, y1, x2, y2);
+    S = P_ap + G_ap - PL_dsr;
+    I = P_no + G_no - PL_dn;
+    res = S - I;
+end
+
+function res = pathloss(x1, y1, x2, y2)
+    global lambda
+    res = 20*(log10(4 * pi * (distance(x1, y1, x2, y2)) / lambda));
+end
+
+function res = distance(x1, y1, x2, y2)
+    res = sqrt((x1-x2)^2 + (y1-y2)^2);
+end
