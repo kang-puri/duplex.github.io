@@ -24,8 +24,8 @@ for N = 4:4:40
         y_no = r2.*sin(theta2);
 
         % initialize check_map
-        check_map = zeros(4,4);
-        check_success = zeros(1,4);
+        check_map = zeros(N,N);
+        check_success = zeros(1,N);
         for i=1:N
             for j=1:N
                 if i~=j
