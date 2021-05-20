@@ -88,6 +88,7 @@ for N = 4:4:40
                 end
                 % success 경우 더해주기
                 SFD = SFD + check_success;
+                SHD = SHD + (1-check_success);
                 sys_time = check_success*T_FT + (1-check_success)*T_HT;
             end
 
