@@ -1,55 +1,139 @@
 clc; clear; close all;
 
-%---------------------------------set up---------------------------------
+data_rate = 18; m_max = 6; 
+PHY_header = 20; PHY_preamble = 16;
+RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
+SIFS = 16; DIFS = 34; 
+MAC_header = 10;
+slot_time = 9;
+H = MAC_header + PHY_header;
+ACK = ACK_size/data_rate + PHY_header;  
+RTS = RTS_size/data_rate + PHY_header;
+CTS = CTS_size/data_rate + PHY_header;  
+T_HT = H + RTS + CTS + Payload/data_rate + ACK + 3 * SIFS + DIFS;
+T_FT = H + RTS + CTS + Payload/data_rate + 2 * ACK + 4 * SIFS + DIFS;
+Tc = RTS + SIFS + CTS + slot_time;
 
 Frequency = 5500*10^6;
 lambda = physconst('LightSpeed')/Frequency;
 delta = 11;
 
-initAP();           % initialize x_ap y_ap m r
+%---------------------------------set up---------------------------------
 
+initAP();           % initialize x_ap y_ap m r
 TC = 10^3;          % the number of testcase
-total_success = 0;  % total_success
-total_ratio = [];
+TS = 15*10^6;       % sys_time 30초동안
+
+total_throughput = [];
 for N = 4:4:40
-    total_success = 0;
     for tc = 1: TC
+        SHD = 0;
+        SFD = 0;
+        sys_time = 0;
+
         r = 20;
         r2= r*sqrt(rand(1,N));
         theta2 = 2 * pi * rand(1,N);
         x_no = r2.*cos(theta2);
         y_no = r2.*sin(theta2);
+        CW_min = 15; 
+        CW = CW_min;
+        count_ap = randi([0 CW], 1);
+        count_no = randi([0 CW], 1, N);
+        stage_ap = zeros(1);
+        stage_no = zeros(1,N);
 
-        % initialize check_map
-        check_map = zeros(N,N);
-        check_success = zeros(1,N);
-        for i=1:N
-            for j=1:N
-                if i~=j
-                    SIR = SIRatio(x_no(j), y_no(j), x_no(i), y_no(i));
-                    if SIR > delta
-                        check_map(j, i) = 1;
-                        check_success(1, i) = 1;
+        while sys_time < TS
+            numaz = find(count_ap(1,:)==0);
+            numnz = find(count_no(1,:) == 0);
+            na = numel(numaz);
+            nn = numel(numnz);
+
+            freeze = 1;
+
+            % 1) 0 없음 ===========================================idle==================================================
+            if na == 0 && nn == 0
+                sys_time = sys_time + slot_time;
+            end         
+
+            % 2) 0이 한 개 (NO Collision) =========================SUCCESS===============================================
+            % AP가 WIN(HD)
+            if na == 1 && nn == 0   
+                freeze = 0;
+                SHD = SHD + 1;
+                sys_time = sys_time + T_HT;
+                count_ap = randi([0 CW]);
+                stage_ap = 0;
+
+            % NODE WIN(HD or FD)   
+            elseif na == 0 && nn == 1 
+                freeze = 0;
+                % initialize check_map
+                check_map = zeros(N,1);
+                check_success = 0;
+                for i=1:N
+                    if count_no(1,i) == 0 
+                        for j=1:N
+                            if i~=j
+                                SIR = SIRatio(x_no(j), y_no(j), x_no(i), y_no(i));
+                                if SIR > delta
+                                    check_map(j, 1) = 1;
+                                    check_success = 1;
+                                end
+                            end
+                        end
+                        count_no(1,i) = randi([0 CW]);
+                        stage_no(1,i) = 0;
                     end
                 end
+                % success 경우 더해주기
+                SFD = SFD + check_success;
+                sys_time = check_success*T_FT + (1-check_success)*T_HT;
+            end
+
+            % 3) 0이 둘 이상==========================COLLISION=======================================================
+            if na + nn >= 2
+                freeze = 0;
+                sys_time = sys_time + Tc;
+                if na >= 1
+                    if stage_ap < m_max
+                        stage_ap = stage_ap + 1;
+                        count_ap = randi([0 (CW+1)*2^stage_ap-1]);
+                    elseif stage_ap == m_max
+                        count_ap = randi([0 (CW+1)*2^m_max-1]);
+                    end
+                end
+                if nn >=1
+                    for i = 1:N
+                        if count_no(1,i) == 0
+                            if stage_no(1,i) < m_max
+                                stage_no(1,i) = stage_no(1,i) + 1;
+                                count_no(1,i) = randi([0 (CW+1)*2^stage_no(1,i)-1]);
+                            elseif stage_no(1,i) == m_max
+                                count_no(1,i) = randi([0 (CW+1)*2^m_max-1]);
+                            end
+                        end
+                    end
+                end
+            end   
+            %check_map
+            %check_success
+            %pause(2);
+
+            if freeze > 0
+                count_ap = count_ap - 1;
+                count_no(1,:) = count_no(1,:) - ones(1);
             end
         end
-        % success 경우 더해주기
-        total_success = total_success + numel(find(check_success(1,:)==1));
+        throughput = ((SHD*Payload+SFD*Payload*2)/ TS);
+        %throughput_map(1,TC) = throughput;
 
-        %check_map
-        %check_success
-        %pause(2);
     end
-    ratio_success = (total_success / (TC * N));
-    %ratio_success
-    total_ratio = [total_ratio ratio_success];
-
-end
-%total_ratio
-figure(1)
-plot(4:4:40, total_ratio,'b-o','LineWidth',1);
-axis([4 40 0 1.5]);
+end     
+%total_throughput
+%figure(1)
+%plot(4:4:40, total_throughput,'b-o','LineWidth',1);
+%axis([4 40 0 1.5]);
 
 function initAP()
     global x_ap y_ap m r
