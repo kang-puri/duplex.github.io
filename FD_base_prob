@@ -1,0 +1,151 @@
+%<parameter>
+%throughput계산:Ts,Tc,Payload
+%power allocation coefficient
+%:transmittedSNR(로)=P(maximumtransmissionpower)/No(gaussiannoise),pathloss
+
+%<table>
+% AP 모든 노드 SINR 정보앎
+    % Uplink, Downlink > 임계값
+        % Uplink
+            % SINR 정보로 power allocation coefficient계산
+                % Prime, Second 구분
+% table(Uplink1,Uplink2,Downlink)
+
+%<CSMA>
+% node가 이길 때
+    % AP가 FD가능
+        % NOMA 매칭 가능
+            % 노드선택
+            % 선택받은노드(2), AP, 채널경쟁이긴노드 전송과정
+        % NOMA 매칭 불가능
+            % 한노드, AP, 채널경쟁이긴노드 전송과정
+    % FD불가능
+        % 기존CSMA/CA
+% AP가 이길 때
+    % Uplink만
+clc; clear; close all;
+
+%---------------------------------set up---------------------------------
+
+data_rate = 18;     %18,24,36,48,54
+m_max = 6;
+CW_min = 15;
+
+%succ_numfd = 0;
+%succ_numhd = 0;
+CW = CW_min;
+
+PHY_header = 20; 
+PHY_preamble = 16;  %microseconds
+RTS_size = 20*8;
+CTS_size = 14*8;
+ACK_size = 14*8;
+Payload = 1500*8;   %bytes
+SIFS = 16; 
+DIFS = 34; 
+slot_time = 9;
+
+MAC_header = 10;
+
+ACK = ACK_size/data_rate + PHY_header;  
+RTS = RTS_size/data_rate + PHY_header;
+CTS = CTS_size/data_rate + PHY_header;  
+
+H = MAC_header + PHY_header;
+
+T_HT = H + RTS + CTS + Payload/data_rate + ACK + 3 * SIFS + DIFS;
+T_FT = H + RTS + CTS + Payload/data_rate + 2 * ACK + 4 * SIFS + DIFS;
+Tc = RTS + SIFS + CTS + slot_time;
+
+MCS = 2;                %2,3,4,5,6
+delta = 11;
+%13-14,18-19,22-23,24-25
+Frequency = 5500*10^6;
+global lambda
+lambda = physconst('LightSpeed')/Frequency;
+
+
+%---------------------------------AP,NODE------------------------------
+x_ap = 0;
+y_ap = 0;    % 전체 60m
+
+ap = [x_ap y_ap];   % ap통신범위
+
+r = 20; % AP coverage
+m = 10^3;
+theta = linspace(0, 2*pi, m);
+x = r*cos(theta)+ap(1);
+y = r*sin(theta)+ap(2);
+p_fd = [];
+number = 0;
+
+initVar();          % initialize G_ap G_no P_ap P_no
+TC = 10^4;          % the number of testcase
+total_success = 0;  % total_success
+
+total_ratio = [];
+for N = 4:4:40
+    total_success = 0;
+    for tc = 1: TC
+
+        r2= r*sqrt(rand(1,N));
+        theta2 = 2 * pi * rand(1,N);
+        x_no = r2.*cos(theta2);
+        y_no = r2.*sin(theta2);
+
+        % initialize check_map
+        check_map = zeros(4,4);
+        check_success = zeros(1,4);
+        for i=1:N
+            for j=1:N
+                if i~=j
+                    SIR = SIRatio(x_no(j), y_no(j), x_no(i), y_no(i));
+                    if SIR > delta
+                        check_map(j, i) = 1;
+                        check_success(1, i) = 1;
+                    end
+                end
+            end
+        end
+        % success 경우 더해주기
+        total_success = total_success + numel(find(check_success(1,:)==1));
+
+        %check_map
+        %check_success
+        %pause(2);
+    end
+    ratio_success = (total_success / (TC * N));
+    %ratio_success
+    total_ratio = [total_ratio ratio_success];
+
+end
+%total_ratio
+figure(1)
+plot(4:4:40, total_ratio,'b-o','LineWidth',1);
+
+
+function initVar()
+    global G_ap G_no P_ap P_no
+    G_ap = 0;
+    G_no = -2;
+    P_ap = 20;
+    P_no = 15;
+end
+
+function res = SIRatio(x1, y1, x2, y2)
+    global G_ap G_no P_ap P_no
+    PL_dsr = pathloss(x1, y1, 0, 0);
+    PL_dn = pathloss(x1, y1, x2, y2);
+    S = P_ap + G_ap - PL_dsr;
+    I = P_no + G_no - PL_dn;
+    res = S - I;
+end
+
+function res = pathloss(x1, y1, x2, y2)
+    global lambda;
+    res = 20*(log10(4 * pi * (distance(x1, y1, x2, y2)) / lambda));
+end
+
+function res = distance(x1, y1, x2, y2)
+    res = sqrt((x1-x2)^2 + (y1-y2)^2);
+end
