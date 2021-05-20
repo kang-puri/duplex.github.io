@@ -6,9 +6,6 @@ Frequency = 5500*10^6;
 lambda = physconst('LightSpeed')/Frequency;
 delta = 11;
 
-initVar();          % initialize data_rate m_max CW_min 
-                    % PHY_header PHY_preamble RTS_size CTS_size ACK_size Payload 
-                    % SIFS DIFS slot_time MAC_header
 initAP();           % initialize x_ap y_ap m r
 
 TC = 10^3;          % the number of testcase
@@ -53,22 +50,6 @@ end
 figure(1)
 plot(4:4:40, total_ratio,'b-o','LineWidth',1);
 axis([4 40 0 1.5]);
-
-function initVar()
-    global data_rate m_max CW_min PHY_header PHY_preamble RTS_size CTS_size ACK_size Payload SIFS DIFS slot_time MAC_header
-    data_rate = 18; m_max = 6; CW_min = 15; CW = CW_min;
-    PHY_header = 20; PHY_preamble = 16;
-    RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
-    SIFS = 16; DIFS = 34; slot_time = 9;
-    MAC_header = 10;
-    ACK = ACK_size/data_rate + PHY_header;  
-    RTS = RTS_size/data_rate + PHY_header;
-    CTS = CTS_size/data_rate + PHY_header;  
-    H = MAC_header + PHY_header;
-    T_HT = H + RTS + CTS + Payload/data_rate + ACK + 3 * SIFS + DIFS;
-    T_FT = H + RTS + CTS + Payload/data_rate + 2 * ACK + 4 * SIFS + DIFS;
-    Tc = RTS + SIFS + CTS + slot_time;
-end
 
 function initAP()
     global x_ap y_ap m r
