@@ -1,11 +1,11 @@
 clc; clear; close all;
 
-data_rate = 18; m_max = 6; 
-PHY_header = 20; PHY_preamble = 16;
+data_rate = 18*10^6; m_max = 6; 
+PHY_header = 20*10^-6; PHY_preamble = 16*10^-6;
 RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
-SIFS = 16; DIFS = 34; 
-MAC_header = 10;
-slot_time = 9;
+SIFS = 16*10^-6; DIFS = 34*10^-6; 
+MAC_header = 10*10^-6;
+slot_time = 9*10^-6;
 H = MAC_header + PHY_header;
 ACK = ACK_size/data_rate + PHY_header;  
 RTS = RTS_size/data_rate + PHY_header;
@@ -21,11 +21,13 @@ delta = 11;
 %---------------------------------set up---------------------------------
 
 initAP();           % initialize x_ap y_ap m r
-TC = 10^3;          % the number of testcase
-TS = 15*10^6;       % sys_time 30초동안
+TC = 100;          % the number of testcase
+TS = 5;       % sys_time 30초동안
 
 total_throughput = [];
-for N = 4:4:40
+%for N = 4:4:40
+ N=4;   
+    throughput_map = zeros(1,TC);
     for tc = 1: TC
         SHD = 0;
         SFD = 0;
@@ -42,7 +44,7 @@ for N = 4:4:40
         count_no = randi([0 CW], 1, N);
         stage_ap = zeros(1);
         stage_no = zeros(1,N);
-
+        
         while sys_time < TS
             numaz = find(count_ap(1,:)==0);
             numnz = find(count_no(1,:) == 0);
@@ -125,12 +127,14 @@ for N = 4:4:40
                 count_ap = count_ap - 1;
                 count_no(1,:) = count_no(1,:) - ones(1);
             end
+            throughput = ((SHD*Payload+SFD*Payload*2)/ TS);
         end
-        throughput = ((SHD*Payload+SFD*Payload*2)/ TS);
-        %throughput_map(1,TC) = throughput;
-
+        throughput_map(1,tc) = throughput;
     end
-end     
+    S = mean(throughput_map);
+    total_troughput = [total_troughput S];
+%end
+     
 %total_throughput
 %figure(1)
 %plot(4:4:40, total_throughput,'b-o','LineWidth',1);
@@ -144,9 +148,6 @@ function initAP()
     m = 10^3;
     theta = linspace(0, 2*pi, m);
     r = 20;
-    x = r*cos(theta)+ap(1);
-    y = r*sin(theta)+ap(2);
-
 end
 
 function res = SIRatio(x1, y1, x2, y2)
