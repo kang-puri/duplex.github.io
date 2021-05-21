@@ -106,14 +106,13 @@ N=4;
                     end
                 end
                 if nn >=1
-                    for i = 1:N
-                        if count_no(1,i) == 0
-                            if stage_no(1,i) < m_max
-                                stage_no(1,i) = stage_no(1,i) + 1;
-                                count_no(1,i) = randi([0 (CW+1)*2^stage_no(1,i)-1]);
-                            elseif stage_no(1,i) == m_max
-                                count_no(1,i) = randi([0 (CW+1)*2^m_max-1]);
-                            end
+                    for idx = 1:nn
+                        i = numnz(1,idx);
+                        if stage_no(1,i) < m_max
+                            stage_no(1,i) = stage_no(1,i) + 1;
+                            count_no(1,i) = randi([0 (CW+1)*2^stage_no(1,i)-1]);
+                        elseif stage_no(1,i) == m_max
+                            count_no(1,i) = randi([0 (CW+1)*2^m_max-1]);
                         end
                     end
                 end
