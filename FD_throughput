@@ -2,6 +2,7 @@ clc; clear; close all;
 
 
 Frequency = 5500*10^6;
+global lambda
 lambda = physconst('LightSpeed')/Frequency;
 delta = 11;
 
@@ -207,7 +208,7 @@ for N = 4:4:40
     end
 
     S = mean(throughput_map);
-    total_troughput = [total_troughput S];
+    total_throughput = [total_throughput S];
      
 end
 %total_throughput
