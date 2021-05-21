@@ -1,18 +1,19 @@
 clc; clear; close all;
+tic
 
 data_rate = 18*10^6; m_max = 6; 
 PHY_header = 20*10^-6; PHY_preamble = 16*10^-6;
 RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
 SIFS = 16*10^-6; DIFS = 34*10^-6; 
-MAC_header = 0;
+MAC_header = 40*8;
 slot_time = 9*10^-6;
-H = MAC_header + PHY_header;
+H =  PHY_header;
 ACK = ACK_size/data_rate + PHY_header;  
 RTS = RTS_size/data_rate + PHY_header;
 CTS = CTS_size/data_rate + PHY_header;  
-T_HT = H + RTS + CTS + Payload/data_rate + ACK + 3 * SIFS + DIFS;
-T_FT = H + RTS + CTS + Payload/data_rate + 2 * ACK + 4 * SIFS + DIFS;
-Tc = RTS + SIFS + CTS + slot_time;
+T_HT = H + RTS + CTS + (Payload+MAC_header)/data_rate + ACK + 3 * SIFS + DIFS;
+T_FT = H + RTS + CTS + (Payload+MAC_header)/data_rate + 2 * ACK + 4 * SIFS + DIFS;
+Tc = RTS + SIFS + CTS + slot_time + DIFS;
 
 Frequency = 5500*10^6;
 global lambda
@@ -21,8 +22,9 @@ delta = 11;
 
 %---------------------------------set up---------------------------------
 
+initAP();           % initialize x_ap y_ap m r
 TC = 1000;          % the number of testcase
-TS = 5;       % sys_time 30초동안 
+TS = 5;       % sys_time 30초동안
 
 total_throughput = [];
 %for N = 4:4:40
@@ -135,19 +137,29 @@ N=4;
     total_throughput = [total_throughput S];
     total_throughput
 %end
-     
+toc     
 %total_throughput
 %figure(1)
 %plot(4:4:40, total_throughput,'b-o','LineWidth',1);
 %axis([4 40 0 1.5]);
+
+function initAP()
+    global x_ap y_ap m r
+    x_ap = 0;
+    y_ap = 0;    
+    ap = [x_ap y_ap];
+    m = 10^3;
+    theta = linspace(0, 2*pi, m);
+    r = 20;
+end
 
 function res = SIRatio(x1, y1, x2, y2)
     global G_ap G_no P_ap P_no
     G_ap = 0; G_no = -2; P_ap = 20; P_no = 15;
     PL_dsr = pathloss(x1, y1, 0, 0);
     PL_dn = pathloss(x1, y1, x2, y2);
-    S = P_ap + G_ap - PL_dsr;
-    I = P_no + G_no - PL_dn;
+    S = P_ap + G_ap + G_no- PL_dsr;
+    I = P_no + G_no + G_no- PL_dn;
     res = S - I;
 end
 
