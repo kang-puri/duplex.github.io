@@ -1,6 +1,5 @@
 clc; clear; close all;
 
-
 data_rate = 18*10^6; m_max = 6; 
 PHY_header = 20*10^-6; PHY_preamble = 16*10^-6;
 RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
@@ -22,21 +21,16 @@ delta = 11;
 
 %---------------------------------set up---------------------------------
 
-initAP();           % initialize x_ap y_ap m r
-TC = 10^3;          % the number of testcase
-TS = 15*10^6;       % sys_time 30초동안
+TC = 1000;          % the number of testcase
+TS = 5;       % sys_time 30초동안 
 
 total_throughput = [];
-UP = [];
 %for N = 4:4:40
-N = 4;
+N=4;   
     throughput_map = zeros(1,TC);
     for tc = 1: TC
         SHD = 0;
         SFD = 0;
-        SNOFD = 0;
-        SNOMA = 0;
-
         sys_time = 0;
 
         r = 20;
@@ -50,7 +44,7 @@ N = 4;
         count_no = randi([0 CW], 1, N);
         stage_ap = zeros(1);
         stage_no = zeros(1,N);
-
+        
         while sys_time < TS
             numaz = find(count_ap(1,:)==0);
             numnz = find(count_no(1,:) == 0);
@@ -69,7 +63,7 @@ N = 4;
             if na == 1 && nn == 0   
                 freeze = 0;
                 SHD = SHD + 1;
-                sys_time = sys_time + T_HD;
+                sys_time = sys_time + T_HT;
                 count_ap = randi([0 CW]);
                 stage_ap = 0;
 
@@ -97,94 +91,11 @@ N = 4;
                 % success 경우 더해주기
                 SFD = SFD + check_success;
                 SHD = SHD + (1-check_success);
-                sys_time = check_success*T_FD + (1-check_success)*T_HD;
+                sys_time = sys_time + check_success*T_FT + (1-check_success)*T_HT;
             end
 
-            % 3) 0이 두 개 ===========================SUCCESS=======================================================
-            if na == 0 && nn == 2
-                freeze = 0;
-                for i = 1:N
-                    if count_no(1,i) == 0
-                        UP = [UP, i];
-                    end
-                end
-                left = UP(1);
-                right = UP(2);
-                PL_1 = pathloss(x_no(left), y_no(left), 0, 0);
-                PL_2 = pathloss(x_no(right), y_no(right), 0, 0);
-                if PL_1 > PL_2
-                    PRI = left;
-                    SEC = right;
-                else
-                    PRI = right;
-                    SEC = left;
-                end
-                for j = 1:N
-                    if j ~= left && j ~= right
-                        dad = sqrt(x_no(j)^2 + y_no(j)^2);
-                        PL_dad = 20*log10(4*pi*dad/lambda);
-                        ddu1 = sqrt((x_no(PRI)-x_no(j))^2 + (y_no(PRI)-y_no(j))^2);
-                        ddu2 = sqrt((x_no(SEC)-x_no(j))^2 + (y_no(SEC)-y_no(j))^2);
-                        PL_U = 10*log10((4*pi*ddu1/lambda)^2 + (4*pi*ddu2/lambda)^2);
-                        Sj = P_ap + G_ap - PL_dad;
-                        Ij = P_ap + 2 * G_no - PL_U;
-                        SIRj = Sj - Ij ;
-                        sirj = [sirj, SIRj];
-                    end
-                end
-                M = max(sirj);
-                %[count_ap count_no]
-                %[M J]
-                dapi = sqrt(x_no(PRI)^2 + y_no(PRI)^2);
-                dase = sqrt(x_no(SEC)^2 + y_no(SEC)^2);
-                PL_dapi = 20*log10(4*pi*dad/lambda);
-                PL_dase = 20*log10(4*pi*dase/lambda);
-
-                %lamda1 = 0.8;
-                %lamda2 = 1-lamda1;
-
-                P_n1 = 14;
-                P_n2 = 8;
-
-                S_1 = P_n1 + G_no - PL_dapi;
-                I_1 = P_n2 + G_no - PL_dase;
-                SIR_PRI = S_1 - I_1;
-                S_2 = P_n2 + G_no - PL_dase;
-                SIR_SEC = S_2;
-                %pause(1)
-                %[M SIR_PRI SIR_SEC]
-                % FD가능
-                if M > delta && SIR_PRI > delta && SIR_SEC > delta 
-                    %NOMA가능
-                    if SIR_PRI > delta && SIR_SEC > delta
-                        sys_time = sys_time + T_NOFD;
-                        SNOFD = SNOFD + 1;
-                    %NOMA불가능
-                    else
-                        sys_time = sys_time + T_FD;
-                        SFD = SFD + 1;
-                    end
-                % FD불가능    
-                else
-                    %NOMA가능
-                    if  SIR_PRI > delta && SIR_SEC > delta
-                        sys_time = sys_time + T_NOMA;
-                        SNOMA = SNOMA + 1;
-                    %NOMA불가능
-                    else
-                        sys_time = sys_time + T_HD;
-                        SHD = SHD + 1;
-                    end
-                end
-                for i = 1:N
-                    if count_no(1,i) == 0
-                        count_no(1,i) = randi([0 CW]);
-                        stage_no(1,i) = 0;
-                    end
-                end
-            end
-            % 4) 0이 셋 이상==========================COLLISION=======================================================
-            if na + nn >= 3 && (na == 1 && nn ==1)
+            % 3) 0이 둘 이상==========================COLLISION=======================================================
+            if na + nn >= 2
                 freeze = 0;
                 sys_time = sys_time + Tc;
                 if na >= 1
@@ -216,33 +127,20 @@ N = 4;
                 count_ap = count_ap - 1;
                 count_no(1,:) = count_no(1,:) - ones(1);
             end
-            throughput = ((SHD*Payload+SFD*Payload*2+SNOFD*Payload*3+SNOMA*Payload*2)/ TS);
+            throughput = ((SHD*Payload+SFD*Payload*2)/ TS);
         end
         throughput_map(1,tc) = throughput;
     end
-
     S = mean(throughput_map);
     total_throughput = [total_throughput S];
-     
+    total_throughput
 %end
-total_throughput
+     
+%total_throughput
 %figure(1)
 %plot(4:4:40, total_throughput,'b-o','LineWidth',1);
 %axis([4 40 0 1.5]);
 
-
-function initAP()
-    global x_ap y_ap m r
-    x_ap = 0;
-    y_ap = 0;    
-    ap = [x_ap y_ap];
-    m = 10^3;
-    theta = linspace(0, 2*pi, m);
-    r = 20;
-    x = r*cos(theta)+ap(1);
-    y = r*sin(theta)+ap(2);
-
-end
 function res = SIRatio(x1, y1, x2, y2)
     global G_ap G_no P_ap P_no
     G_ap = 0; G_no = -2; P_ap = 20; P_no = 15;
@@ -252,6 +150,7 @@ function res = SIRatio(x1, y1, x2, y2)
     I = P_no + G_no - PL_dn;
     res = S - I;
 end
+
 function res = pathloss(x1, y1, x2, y2)
     global lambda
     res = 20*(log10(4 * pi * (distance(x1, y1, x2, y2)) / lambda));
