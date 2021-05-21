@@ -23,7 +23,7 @@ delta = 11;
 %---------------------------------set up---------------------------------
 
 
-TC = 100;          % the number of testcase
+TC = 1000;          % the number of testcase
 TS = 5;       % sys_time 30초동안
 
 total_throughput = [];
