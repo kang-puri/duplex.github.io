@@ -23,7 +23,7 @@ delta = 11;
 %---------------------------------set up---------------------------------
 
 initAP();           % initialize x_ap y_ap m r
-TC = 1000;          % the number of testcase
+TC = 100;          % the number of testcase
 TS = 5;       % sys_time 30초동안
 
 total_throughput = [];
@@ -142,16 +142,6 @@ toc
 %figure(1)
 %plot(4:4:40, total_throughput,'b-o','LineWidth',1);
 %axis([4 40 0 1.5]);
-
-function initAP()
-    global x_ap y_ap m r
-    x_ap = 0;
-    y_ap = 0;    
-    ap = [x_ap y_ap];
-    m = 10^3;
-    theta = linspace(0, 2*pi, m);
-    r = 20;
-end
 
 function res = SIRatio(x1, y1, x2, y2)
     global G_ap G_no P_ap P_no
