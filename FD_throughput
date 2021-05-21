@@ -1,6 +1,20 @@
 clc; clear; close all;
 
 
+data_rate = 18*10^6; m_max = 6; 
+PHY_header = 20*10^-6; PHY_preamble = 16*10^-6;
+RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
+SIFS = 16*10^-6; DIFS = 34*10^-6; 
+MAC_header = 0;
+slot_time = 9*10^-6;
+H = MAC_header + PHY_header;
+ACK = ACK_size/data_rate + PHY_header;  
+RTS = RTS_size/data_rate + PHY_header;
+CTS = CTS_size/data_rate + PHY_header;  
+T_HT = H + RTS + CTS + Payload/data_rate + ACK + 3 * SIFS + DIFS;
+T_FT = H + RTS + CTS + Payload/data_rate + 2 * ACK + 4 * SIFS + DIFS;
+Tc = RTS + SIFS + CTS + slot_time;
+
 Frequency = 5500*10^6;
 global lambda
 lambda = physconst('LightSpeed')/Frequency;
@@ -14,7 +28,8 @@ TS = 15*10^6;       % sys_time 30초동안
 
 total_throughput = [];
 UP = [];
-for N = 4:4:40
+%for N = 4:4:40
+N = 4;
     throughput_map = zeros(1,TC);
     for tc = 1: TC
         SHD = 0;
@@ -136,7 +151,6 @@ for N = 4:4:40
                 SIR_PRI = S_1 - I_1;
                 S_2 = P_n2 + G_no - PL_dase;
                 SIR_SEC = S_2;
-
                 %pause(1)
                 %[M SIR_PRI SIR_SEC]
                 % FD가능
@@ -168,7 +182,7 @@ for N = 4:4:40
                         stage_no(1,i) = 0;
                     end
                 end
-
+            end
             % 4) 0이 셋 이상==========================COLLISION=======================================================
             if na + nn >= 3 && (na == 1 && nn ==1)
                 freeze = 0;
@@ -210,10 +224,10 @@ for N = 4:4:40
     S = mean(throughput_map);
     total_throughput = [total_throughput S];
      
-end
-%total_throughput
-figure(1)
-plot(4:4:40, total_throughput,'b-o','LineWidth',1);
+%end
+total_throughput
+%figure(1)
+%plot(4:4:40, total_throughput,'b-o','LineWidth',1);
 %axis([4 40 0 1.5]);
 
 
