@@ -72,23 +72,21 @@ N=4;
             elseif na == 0 && nn == 1 
                 freeze = 0;
                 % initialize check_map
-                check_map = zeros(N,1);
+                %check_map = zeros(N,1);
                 check_success = 0;
-                for i=1:N
-                    if count_no(1,i) == 0 
-                        for j=1:N
-                            if i~=j
-                                SIR = SIRatio(x_no(j), y_no(j), x_no(i), y_no(i));
-                                if SIR > delta
-                                    check_map(j, 1) = 1;
-                                    check_success = 1;
-                                end
-                            end
+                i = numnz(1,1);
+                for j=1:N
+                    if i~=j
+                        SIR = SIRatio(x_no(j), y_no(j), x_no(i), y_no(i));
+                        if SIR > delta
+                            %check_map(j, 1) = 1;
+                            check_success = 1;
+                            break;
                         end
-                        count_no(1,i) = randi([0 CW]);
-                        stage_no(1,i) = 0;
                     end
                 end
+                count_no(1,i) = randi([0 CW]);
+                stage_no(1,i) = 0;
                 % success 경우 더해주기
                 SFD = SFD + check_success;
                 SHD = SHD + (1-check_success);
@@ -108,16 +106,14 @@ N=4;
                     end
                 end
                 if nn >=1
-                    for i = 1:N
-                        if count_no(1,i) == 0
-                            if stage_no(1,i) < m_max
-                                stage_no(1,i) = stage_no(1,i) + 1;
-                                count_no(1,i) = randi([0 (CW+1)*2^stage_no(1,i)-1]);
-                            elseif stage_no(1,i) == m_max
-                                count_no(1,i) = randi([0 (CW+1)*2^m_max-1]);
-                            end
-                        end
+                    i = numnz(1,1);
+                    if stage_no(1,i) < m_max
+                        stage_no(1,i) = stage_no(1,i) + 1;
+                        count_no(1,i) = randi([0 (CW+1)*2^stage_no(1,i)-1]);
+                    elseif stage_no(1,i) == m_max
+                        count_no(1,i) = randi([0 (CW+1)*2^m_max-1]);
                     end
+                    
                 end
             end   
             %check_map
