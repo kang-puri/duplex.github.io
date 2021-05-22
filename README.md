@@ -1,1 +1,1 @@
-# half-duplex.github.io
+# half-duplex and full-duplex
