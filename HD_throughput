@@ -18,8 +18,6 @@ Tc = RTS + SIFS + CTS + slot_time + DIFS;
 
 Frequency = 5500*10^6;
 
-global lambda P_ap G_ap G_no P_no
-G_ap = 0; G_no = -2; P_ap = 20; P_no = 15;
 lambda = physconst('LightSpeed')/Frequency;
 delta = 11;
 
