@@ -1,0 +1,120 @@
+clc; clear; close all;
+
+data_rate = 18*10^6; m_max = 6; SIC = 110;
+PHY_header = 20*10^-6; PHY_preamble = 16*10^-6;
+RTS_size = 20*8; CTS_size = 14*8; ACK_size = 14*8; Payload = 1500*8;
+SIFS = 16*10^-6; DIFS = 34*10^-6; 
+MAC_header = 40*8;
+slot_time = 9*10^-6;
+H =  PHY_header;
+ACK = ACK_size/data_rate + PHY_header;  
+RTS = RTS_size/data_rate + PHY_header;
+CTS = CTS_size/data_rate + PHY_header;  
+T_HD = H + RTS + CTS + (Payload+MAC_header)/data_rate + ACK + 3 * SIFS + DIFS;
+T_FD = H + RTS + CTS + (Payload+MAC_header)/data_rate + 2 * ACK + 4 * SIFS + DIFS;
+T_NOMA = H + RTS + CTS + (Payload+MAC_header)/data_rate + 2 * ACK + 4 *SIFS + DIFS;
+T_NOFD = H + RTS + 2 * CTS + (Payload+MAC_header)/data_rate + 3 * ACK + 6 * SIFS + DIFS;
+Tc = RTS + SIFS + CTS + slot_time + DIFS;
+
+Frequency = 5500*10^6;
+
+global lambda P_ap G_ap G_no P_no
+G_ap = 0; G_no = -2; P_ap = 20; P_no = 15;
+lambda = physconst('LightSpeed')/Frequency;
+delta = 11;
+
+%---------------------------------set up---------------------------------
+
+TC = 1000;          % the number of testcase
+TS = 15;       % sys_time 30초동안
+
+total_throughputHD = [];
+for N = 4:4:40
+%N=4;   
+    throughput_map = zeros(1,TC);
+    for tc = 1: TC
+        SHD = 0;
+        sys_time = 0;
+
+        r = 20;
+        r2= r*sqrt(rand(1,N));
+        theta2 = 2 * pi * rand(1,N);
+        x_no = r2.*cos(theta2);
+        y_no = r2.*sin(theta2);
+        CW_min = 15; 
+        CW = CW_min;
+        count_ap = randi([0 CW], 1);
+        count_no = randi([0 CW], 1, N);
+        stage_ap = zeros(1);
+        stage_no = zeros(1,N);
+        
+        while sys_time < TS
+            numaz = find(count_ap(1,:)==0);
+            numnz = find(count_no(1,:) == 0);
+            na = numel(numaz);
+            nn = numel(numnz);
+
+            freeze = 1;
+
+            % 1) 0 없음 ===========================================idle==================================================
+            if na + nn == 0
+                sys_time = sys_time + slot_time;
+            end         
+
+            % 2) 0이 한 개 (NO Collision) =========================SUCCESS===============================================
+            if na + nn == 1   
+                freeze = 0;
+                SHD = SHD + 1;
+                sys_time = sys_time + T_HD;
+                if na == 1
+                    count_ap = randi([0 CW]);
+                    stage_ap = 0;
+                else
+                    i = numnz(1,1);
+                    count_no(1,i) = randi([0 CW]);
+                    stage_no(1,i) = 0;
+                end
+            end
+            
+            % 3) 0이 둘 이상==========================COLLISION=======================================================
+            if na + nn >= 2
+                freeze = 0;
+                sys_time = sys_time + Tc;
+                if na >= 1
+                    if stage_ap < m_max
+                        stage_ap = stage_ap + 1;
+                        count_ap = randi([0 (CW+1)*2^stage_ap-1]);
+                    elseif stage_ap == m_max
+                        count_ap = randi([0 (CW+1)*2^m_max-1]);
+                    end
+                end
+                if nn >=1
+                    for idx = 1:nn
+                        i = numnz(1,idx);
+                        if stage_no(1,i) < m_max
+                            stage_no(1,i) = stage_no(1,i) + 1;
+                            count_no(1,i) = randi([0 (CW+1)*2^stage_no(1,i)-1]);
+                        elseif stage_no(1,i) == m_max
+                            count_no(1,i) = randi([0 (CW+1)*2^m_max-1]);
+                        end
+                    end
+                end
+            end   
+            %check_map
+            %check_success
+            %pause(2);
+
+            if freeze > 0
+                count_ap = count_ap - 1;
+                count_no(1,:) = count_no(1,:) - ones(1);
+            end
+            throughput = (SHD*Payload/ TS);
+        end
+        throughput_map(1,tc) = throughput;
+    end
+    S = mean(throughput_map);
+    total_throughputHD = [total_throughputHD S];
+end
+
+figure(1)
+plot(4:4:40, total_throughputHD,'g-o','LineWidth',1);
